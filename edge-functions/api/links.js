@@ -248,18 +248,26 @@ async function deleteLink(context) {
   }
   
   const body = await request.json();
-  const code = body.code;
   
-  if (!code) {
+  // 支持单个 { code } 或批量 { codes: [...] } 删除
+  const codes = Array.isArray(body.codes) && body.codes.length
+    ? body.codes
+    : (body.code ? [body.code] : null);
+  
+  if (!codes) {
     return new Response(JSON.stringify({ error: '缺少短码' }), { 
       status: 400, 
       headers: { 'Content-Type': 'application/json' } 
     });
   }
   
-  await kv.delete(PREFIX + code);
+  let deleted = 0;
+  for (const code of codes) {
+    await kv.delete(PREFIX + code);
+    deleted++;
+  }
   
-  return new Response(JSON.stringify({ success: true }), {
+  return new Response(JSON.stringify({ success: true, deleted, requested: codes.length }), {
     headers: { 'Content-Type': 'application/json' }
   });
 }
